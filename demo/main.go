@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/fogleman/gg"
 	epd "github.com/justmiles/epd/lib/epd7in5v2"
 	"image"
@@ -30,6 +31,7 @@ func main() {
 	dc.Fill()
 
 	buf := convertImage(dc.Image())
+	fmt.Println(buf)
 	//dc.SavePNG("ab.png")
 
 	epd.Display(buf)
@@ -43,7 +45,7 @@ func convertImage(img image.Image) []byte {
 	var bgColor = 1
 
 	buffer := bytes.Repeat([]byte{byteToSend}, (800/8)*480)
-
+	max := (800/8)*480
 	for j := 0; j < 800; j++ {
 		for i := 0; i < 480; i++ {
 			bit := bgColor
@@ -57,7 +59,19 @@ func convertImage(img image.Image) []byte {
 			}
 
 			if i%8 == 7 {
-				buffer[(i/8)+(j*(800/8))] = byteToSend
+				n := (i / 8) + (j * (800 / 8))
+				if n < 0 {
+					n = 0
+				}
+				if j == 480 && i == 7 {
+					fmt.Println(n)
+					fmt.Println("x")
+				}
+				fmt.Printf("j %d i %d\n", j, i)
+				if n >= max {
+					n = max - 1
+				}
+				buffer[n] = byteToSend
 				byteToSend = 0x00
 			}
 		}
