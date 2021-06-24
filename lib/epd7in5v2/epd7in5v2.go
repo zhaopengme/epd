@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	debugEnabled bool = false
+	debugEnabled bool = true
 
 	epdWidth  int = 800
 	epdHeight int = 480
