@@ -4,14 +4,18 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/fogleman/gg"
+	"github.com/golang/freetype/truetype"
 	epd "github.com/justmiles/epd/lib/epd7in5v2"
+	"golang.org/x/image/font/gofont/goregular"
 	"image"
 	"image/color"
 	"log"
+	"strings"
 )
 
 func main() {
-	demo1()
+	demo2("adfasdf")
+	//demo1()
 }
 
 func demo1() {
@@ -35,7 +39,6 @@ func demo1() {
 	dc.Fill()
 
 	buf := convertImage(dc.Image())
-	fmt.Println(buf)
 	//dc.SavePNG("ab.png")
 
 	epd.Display(buf)
@@ -74,4 +77,74 @@ func convertImage(img image.Image) []byte {
 	}
 
 	return buffer
+}
+
+// DisplayText accepts a string text and displays it on the screen
+func demo2(text string) error {
+
+	width := 800
+	height := 480
+
+	// Create new logo context
+	dc := gg.NewContext(width, height)
+
+	// Set Background Color
+	dc.SetRGB(1, 1, 1)
+	dc.Clear()
+
+	// Set font color
+	dc.SetColor(color.Black)
+
+	dc.Fill()
+	dc.SetRGB(0, 0, 0)
+
+	var (
+		maxWidth, maxHeight           float64 = float64(width), float64(height)
+		fontSize                      float64 = 300  // initial font size
+		fontSizeReduction             float64 = 0.95 // reduce the font size by this much until message fits in the display
+		fontSizeMinimum               float64 = 10   // Smallest font size before giving up
+		lineSpacing                   float64 = 1
+		measuredWidth, measuredHeight float64
+	)
+
+	font, err := truetype.Parse(goregular.TTF)
+	if err != nil {
+		return err
+	}
+	for {
+		face := truetype.NewFace(font, &truetype.Options{Size: fontSize})
+		dc.SetFontFace(face)
+
+		stringLines := dc.WordWrap(text, maxWidth)
+
+		measuredWidth, measuredHeight = dc.MeasureMultilineString(strings.Join(stringLines, "\n"), lineSpacing)
+
+		// If the message fits within the frame, let's break. Otherwise reduce the font size and try again
+		if measuredWidth < maxWidth && measuredHeight <= maxHeight {
+			break
+		} else {
+			fontSize = fontSize * fontSizeReduction
+		}
+
+		if fontSize < fontSizeMinimum {
+			return fmt.Errorf("unable to fit text on screen: \n %s", text)
+		}
+		// TODO: debug logging: fmt.Printf("font size: %v\n", fontSize)
+	}
+
+	dc.DrawStringWrapped(text, 0, (maxHeight-measuredHeight)/2-(fontSize/4), 0, 0, maxWidth, lineSpacing, gg.AlignCenter)
+	buf := convertImage(dc.Image())
+
+	epd, e := epd.NewRaspberryPiHat()
+	if e != nil {
+		log.Fatalln(e)
+	}
+	epd.HardwareInit()
+	epd.Clear()
+
+
+	epd.Display(buf)
+
+	epd.Sleep()
+	return nil
 }
