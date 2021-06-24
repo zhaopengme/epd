@@ -11,6 +11,7 @@ import (
 	"image/color"
 	"log"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -145,7 +146,6 @@ func demo2(text string) error {
 	dc.SavePNG("a.png")
 	buf := convertImage(dc.Image())
 
-
 	epd, e := epd.NewRaspberryPiHat()
 	if e != nil {
 		log.Fatalln(e)
@@ -154,6 +154,12 @@ func demo2(text string) error {
 	epd.Clear()
 
 	epd.Display(buf)
+
+	time.Sleep(10 * time.Second)
+
+	epd.Clear()
+
+	time.Sleep(5 * time.Second)
 
 	epd.Sleep()
 	return nil
