@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/justmiles/epd/lib/dashboard"
 	"log"
+	"time"
 )
 
 func main() {
@@ -18,6 +19,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	time.Sleep(10 * time.Second)
+	d.EPDService.Clear()
 
 	d.EPDService.Sleep()
 }

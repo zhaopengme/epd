@@ -255,11 +255,20 @@ func (d *Dashboard) getImageFromFilePath(filePath string) (image.Image, error) {
 
 // Convert converts the input image into a ready-to-display byte buffer.
 func (d *Dashboard) convertImage(img image.Image) []byte {
+	var widthByte, heightByte int
+
+	if d.EPDService.Width%8 == 0 {
+		widthByte = (d.EPDService.Width / 8)
+	} else {
+		widthByte = (d.EPDService.Width/8 + 1)
+	}
+
+	heightByte = d.EPDService.Height
+
 	var byteToSend byte = 0x00
 	var bgColor = 1
 
-	count := (d.EPDService.Width / 8) * d.EPDService.Height
-	buffer := bytes.Repeat([]byte{byteToSend}, count)
+	buffer := bytes.Repeat([]byte{0x00}, widthByte*heightByte)
 
 	for j := 0; j < d.EPDService.Height; j++ {
 		for i := 0; i < d.EPDService.Width; i++ {
@@ -274,11 +283,7 @@ func (d *Dashboard) convertImage(img image.Image) []byte {
 			}
 
 			if i%8 == 7 {
-				n := (i / 8) + (j * (d.EPDService.Width / 8))
-				if n >= count {
-					n = count - 1
-				}
-				buffer[n] = byteToSend
+				buffer[(i/8)+(j*widthByte)] = byteToSend
 				byteToSend = 0x00
 			}
 		}
