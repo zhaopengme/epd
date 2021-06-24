@@ -133,6 +133,8 @@ func demo2(text string) error {
 	}
 
 	dc.DrawStringWrapped(text, 0, (maxHeight-measuredHeight)/2-(fontSize/4), 0, 0, maxWidth, lineSpacing, gg.AlignCenter)
+
+	dc.SavePNG("a.png")
 	buf := convertImage(dc.Image())
 
 	epd, e := epd.NewRaspberryPiHat()
