@@ -3,11 +3,8 @@ package epd7in5v2
 // ported from https://github.com/waveshare/e-Paper/blob/master/RaspberryPi%26JetsonNano/c/lib/e-Paper/EPD_7in5_V2.c
 
 import (
-	"fmt"
-	"os"
-	"time"
-
 	rpio "github.com/stianeikeland/go-rpio/v4"
+	"log"
 )
 
 const (
@@ -80,7 +77,7 @@ func NewRaspberryPiHat() (*EPD, error) {
 
 // New EPD7in5_V2 str
 func New(resetPin, dcPin, csPin, busyPin uint8) (*EPD, error) {
-
+	log.Println("rpio.Open")
 	// rpio.Mode()
 	err := rpio.Open()
 	if err != nil {
@@ -94,6 +91,9 @@ func New(resetPin, dcPin, csPin, busyPin uint8) (*EPD, error) {
 
 	rpio.SpiSpeed(4000000)
 	rpio.SpiChipSelect(0)
+
+
+	log.Println("new EPD")
 
 	return &EPD{
 		resetPin: resetPin,
@@ -126,6 +126,8 @@ func (epd EPD) TurnOnDisplay() {
 
 // Clear is used to clear the e-paper to white
 func (epd EPD) Clear() {
+	log.Println("Clear")
+
 	epd.SendCommand(dataStartTransmission1)
 
 	for i := 1; i <= int(epdWidth*epdHeight/8); i++ {
@@ -142,7 +144,7 @@ func (epd EPD) Clear() {
 
 // HardwareReset resets the hardware
 func (epd EPD) HardwareReset() {
-	debug("epd -> HardwareReset")
+	log.Printf("epd -> HardwareReset")
 	digitalWrite(epd.resetPin, rpio.High)
 	delayMS(200)
 	digitalWrite(epd.resetPin, rpio.Low)
@@ -153,7 +155,6 @@ func (epd EPD) HardwareReset() {
 
 // SendCommand to device
 func (epd EPD) SendCommand(command ...byte) {
-	debug("epd -> SendCommand %v", command)
 	digitalWrite(epd.dcPin, rpio.Low)
 	digitalWrite(epd.csPin, rpio.Low)
 	spiWrite(command...)
@@ -162,7 +163,6 @@ func (epd EPD) SendCommand(command ...byte) {
 
 // SendData to device
 func (epd EPD) SendData(command ...byte) {
-	debug("epd -> SendData %v", command)
 	digitalWrite(epd.dcPin, rpio.High)
 	digitalWrite(epd.csPin, rpio.Low)
 	spiWrite(command...)
@@ -171,7 +171,7 @@ func (epd EPD) SendData(command ...byte) {
 
 // HardwareInit used to initialize e-Paper or wakeup e-Paper from sleep mode.
 func (epd EPD) HardwareInit() {
-	debug("epd -> HardwareInit")
+	log.Printf("epd -> HardwareInit")
 
 	epd.HardwareReset()
 
@@ -213,40 +213,45 @@ func (epd EPD) HardwareInit() {
 
 // ReadBusy reads
 func (epd EPD) ReadBusy() {
-
-	// Setup Timeout
-	ch := make(chan bool, 1)
-	timeout := make(chan bool, 1)
-	defer close(ch)
-	defer close(timeout)
-
-	// Timeout function
-	go func() {
-		time.Sleep(60 * time.Second)
-		timeout <- true
-	}()
-
-	// Wait for busy
-	go func() {
-
+	epd.SendCommand(getStatus)
+	for digitalRead(epd.busyPin) == rpio.Low {
 		epd.SendCommand(getStatus)
-		for digitalRead(epd.busyPin) == rpio.Low {
-			debug("epd -> ReadBusy")
-			epd.SendCommand(getStatus)
-			delayMS(200)
-		}
-
-		ch <- true
-	}()
-
-	select {
-	case <-ch:
-		return
-	case <-timeout:
-		// TODO: consider initing the device after timeout
-		fmt.Println("Timeout waiting for EPD busy status. Did you inititalize (wake) the device?")
-		os.Exit(2)
+		delayMS(200)
 	}
+
+	//
+	//// Setup Timeout
+	//ch := make(chan bool, 1)
+	//timeout := make(chan bool, 1)
+	//defer close(ch)
+	//defer close(timeout)
+	//
+	//// Timeout function
+	//go func() {
+	//	time.Sleep(60 * time.Second)
+	//	timeout <- true
+	//}()
+	//
+	//// Wait for busy
+	//go func() {
+	//
+	//	epd.SendCommand(getStatus)
+	//	for digitalRead(epd.busyPin) == rpio.Low {
+	//		epd.SendCommand(getStatus)
+	//		delayMS(200)
+	//	}
+	//
+	//	ch <- true
+	//}()
+	//
+	//select {
+	//case <-ch:
+	//	return
+	//case <-timeout:
+	//	// TODO: consider initing the device after timeout
+	//	fmt.Println("Timeout waiting for EPD busy status. Did you inititalize (wake) the device?")
+	//	os.Exit(2)
+	//}
 }
 
 // Sleep is used to set the device to sleep mode
