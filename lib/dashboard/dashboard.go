@@ -258,7 +258,8 @@ func (d *Dashboard) convertImage(img image.Image) []byte {
 	var byteToSend byte = 0x00
 	var bgColor = 1
 
-	buffer := bytes.Repeat([]byte{byteToSend}, (d.EPDService.Width/8)*d.EPDService.Height)
+	count := (d.EPDService.Width / 8) * d.EPDService.Height
+	buffer := bytes.Repeat([]byte{byteToSend}, count)
 
 	for j := 0; j < d.EPDService.Height; j++ {
 		for i := 0; i < d.EPDService.Width; i++ {
@@ -273,7 +274,11 @@ func (d *Dashboard) convertImage(img image.Image) []byte {
 			}
 
 			if i%8 == 7 {
-				buffer[(i/8)+(j*(d.EPDService.Width/8))] = byteToSend
+				n := (i / 8) + (j * (d.EPDService.Width / 8))
+				if n >= count {
+					n = count - 1
+				}
+				buffer[n] = byteToSend
 				byteToSend = 0x00
 			}
 		}

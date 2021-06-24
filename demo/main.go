@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/fogleman/gg"
+	"github.com/justmiles/epd/lib/dashboard"
 	epd "github.com/justmiles/epd/lib/epd7in5v2"
 	"image"
 	"image/color"
@@ -11,6 +12,23 @@ import (
 )
 
 func main() {
+	d, err := dashboard.NewDashboard(dashboard.WithEPD("epd7in5v2"))
+	if err != nil {
+		log.Panic(err.Error())
+	}
+
+	d.EPDService.HardwareInit()
+	d.EPDService.Clear()
+
+	err = d.DisplayText("hello world")
+	if err != nil {
+		panic(err)
+	}
+
+	d.EPDService.Sleep()
+}
+
+func demo1() {
 
 	epd, e := epd.NewRaspberryPiHat()
 	if e != nil {
@@ -45,7 +63,7 @@ func convertImage(img image.Image) []byte {
 	var bgColor = 1
 
 	buffer := bytes.Repeat([]byte{byteToSend}, (800/8)*480)
-	max := (800/8)*480
+	max := (800 / 8) * 480
 	for j := 0; j < 800; j++ {
 		for i := 0; i < 480; i++ {
 			bit := bgColor
