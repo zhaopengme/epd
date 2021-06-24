@@ -48,14 +48,39 @@ func demo1() {
 
 // Convert converts the input image into a ready-to-display byte buffer.
 func convertImage(img image.Image) []byte {
+	EPD_WIDTH := 800
+	EPD_HEIGHT := 480
+	var widthByte, heightByte int
+
+	if EPD_WIDTH%8 == 0 {
+		widthByte = (EPD_WIDTH / 8)
+	} else {
+		widthByte = (EPD_WIDTH/8 + 1)
+	}
+
+	heightByte = EPD_HEIGHT
+
 	var byteToSend byte = 0x00
-	buffer := bytes.Repeat([]byte{byteToSend}, (800)*480)
-	m := 0
-	for j := 0; j < 800; j++ {
-		for i := 0; i < 480; i++ {
-			bit := color.Palette([]color.Color{color.White, color.Black}).Index(img.At(i, j))
-			buffer[m] = byte(bit)
-			i = i + 1
+	var bgColor = 1
+
+	buffer := bytes.Repeat([]byte{0x00}, widthByte*heightByte)
+
+	for j := 0; j < EPD_HEIGHT; j++ {
+		for i := 0; i < EPD_WIDTH; i++ {
+			bit := bgColor
+
+			if i < img.Bounds().Dx() && j < img.Bounds().Dy() {
+				bit = color.Palette([]color.Color{color.Black, color.White}).Index(img.At(i, j))
+			}
+
+			if bit == 1 {
+				byteToSend |= 0x80 >> (uint32(i) % 8)
+			}
+
+			if i%8 == 7 {
+				buffer[(i/8)+(j*widthByte)] = byteToSend
+				byteToSend = 0x00
+			}
 		}
 	}
 
@@ -118,9 +143,8 @@ func demo2(text string) error {
 	dc.DrawStringWrapped(text, 0, (maxHeight-measuredHeight)/2-(fontSize/4), 0, 0, maxWidth, lineSpacing, gg.AlignCenter)
 
 	dc.SavePNG("a.png")
-	buf := getBuffer(dc.Image())
+	buf := convertImage(dc.Image())
 
-	fmt.Println(buf)
 
 	epd, e := epd.NewRaspberryPiHat()
 	if e != nil {
