@@ -71,7 +71,7 @@ func convertImage(img image.Image) []byte {
 			bit := bgColor
 
 			if i < img.Bounds().Dx() && j < img.Bounds().Dy() {
-				bit = color.Palette([]color.Color{color.Black, color.White}).Index(img.At(i, j))
+				bit = color.Palette([]color.Color{color.White, color.Black}).Index(img.At(i, j))
 			}
 
 			if bit == 1 {
