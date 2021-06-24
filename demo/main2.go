@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	demo2("adfasdf")
+	demo2("bbbbb")
 	//demo1()
 }
 
@@ -49,30 +49,13 @@ func demo1() {
 // Convert converts the input image into a ready-to-display byte buffer.
 func convertImage(img image.Image) []byte {
 	var byteToSend byte = 0x00
-	var bgColor = 1
-
-	buffer := bytes.Repeat([]byte{byteToSend}, (800/8)*480)
-	max := (800 / 8) * 480
+	buffer := bytes.Repeat([]byte{byteToSend}, (800)*480)
+	m := 0
 	for j := 0; j < 800; j++ {
 		for i := 0; i < 480; i++ {
-			bit := bgColor
-
-			if i < img.Bounds().Dx() && j < img.Bounds().Dy() {
-				bit = color.Palette([]color.Color{color.White, color.Black}).Index(img.At(i, j))
-			}
-
-			if bit == 1 {
-				byteToSend |= 0x80 >> (uint32(i) % 8)
-			}
-
-			if i%8 == 7 {
-				n := (i / 8) + (j * (800 / 8))
-				if n >= max {
-					n = max - 1
-				}
-				buffer[n] = byteToSend
-				byteToSend = 0x00
-			}
+			bit := color.Palette([]color.Color{color.White, color.Black}).Index(img.At(i, j))
+			buffer[m] = byte(bit)
+			i = i + 1
 		}
 	}
 
@@ -135,7 +118,9 @@ func demo2(text string) error {
 	dc.DrawStringWrapped(text, 0, (maxHeight-measuredHeight)/2-(fontSize/4), 0, 0, maxWidth, lineSpacing, gg.AlignCenter)
 
 	dc.SavePNG("a.png")
-	buf := convertImage(dc.Image())
+	buf := getBuffer(dc.Image())
+
+	fmt.Println(buf)
 
 	epd, e := epd.NewRaspberryPiHat()
 	if e != nil {
@@ -144,9 +129,65 @@ func demo2(text string) error {
 	epd.HardwareInit()
 	epd.Clear()
 
-
 	epd.Display(buf)
 
 	epd.Sleep()
 	return nil
+}
+
+func getBuffer(image image.Image) []byte {
+	width := 800
+	height := 480
+
+	size := (width * height) / 8
+	data := make([]byte, size)
+	for i := range data {
+		data[i] = 255
+	}
+
+	imageWidth := image.Bounds().Dx()
+	imageHeight := image.Bounds().Dy()
+
+	if imageWidth == width && imageHeight == height {
+		fmt.Println("Vertical")
+		for y := 0; y < imageHeight; y++ {
+			for x := 0; x < imageWidth; x++ {
+				if isBlack(image, x, y) {
+					shift := uint32(x % 8)
+					data[(x+y*width)/8] &= ^(0x80 >> shift)
+				}
+			}
+		}
+	} else if imageWidth == height && imageHeight == width {
+		fmt.Println("Horizontal")
+		for y := 0; y < imageHeight; y++ {
+			for x := 0; x < imageWidth; x++ {
+				newX := y
+				newY := height - x - 1
+				if isBlack(image, x, y) {
+					shift := uint32(y % 8)
+					data[(newX+newY*width)/8] &= ^(0x80 >> shift)
+				}
+			}
+		}
+	} else {
+		fmt.Println("Invalid image size")
+	}
+	return data
+}
+
+func getRGBA(image image.Image, x, y int) (int, int, int, int) {
+	r, g, b, a := image.At(x, y).RGBA()
+	r = r / 257
+	g = g / 257
+	b = b / 257
+	a = a / 257
+
+	return int(r), int(g), int(b), int(a)
+}
+
+func isBlack(image image.Image, x, y int) bool {
+	r, g, b, a := getRGBA(image, x, y)
+	offset := 10
+	return r < 255-offset && g < 255-offset && b < 255-offset && a > offset
 }
